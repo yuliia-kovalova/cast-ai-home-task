@@ -1,0 +1,563 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Driftmail Inbox Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F6F8FC; --surface:#FFFFFF; --row-read:#F2F6FC; --hover:#EAF1FB;
+  --ink:#1F1F1F; --ink-2:#444746; --ink-3:#747775; --line:#E6E9EE; --line-2:#F0F2F5;
+  --blue:#0B57D0; --blue-soft:#D3E3FD; --compose:#C2E7FF; --search:#E9EEF6;
+  --drift:#0B6E6E; --drift-soft:#DDF1EF; --drift-line:#9FD1CC; --drift-pale:#F1F9F8; --drift-pale-line:#C4E4E0; --on-drift:#FFFFFF;
+  --amber:#8A5300; --amber-soft:#FEF0D5; --amber-line:#F1CF8E;
+  --green:#146C2E; --green-soft:#E1F3E5;
+  --snack:#303030; --snack-ink:#F2F2F2; --snack-link:#A8C7FA;
+  --bar:#1B2733; --bar-ink:#E3E8EE;
+  --shadow:0 1px 2px rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15);
+  --sans:Roboto,"Helvetica Neue",Arial,sans-serif; --mono:"Roboto Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --bg:#1B1B1B; --surface:#262626; --row-read:#222325; --hover:#2F3338;
+  --ink:#E3E3E3; --ink-2:#C4C7C5; --ink-3:#9AA0A6; --line:#3A3A3A; --line-2:#303030;
+  --blue:#A8C7FA; --blue-soft:#004A77; --compose:#004A77; --search:#333538;
+  --drift:#6FCFC5; --drift-soft:#173B38; --drift-line:#2F6B65; --drift-pale:#152826; --drift-pale-line:#244A46; --on-drift:#062220;
+  --amber:#F1C06B; --amber-soft:#3A2C0E; --amber-line:#6B5220;
+  --green:#7FD196; --green-soft:#18341F;
+  --snack:#E3E3E3; --snack-ink:#1F1F1F; --snack-link:#0B57D0;
+  --bar:#0E141A; --bar-ink:#C9D3DC; --shadow:0 1px 3px rgba(0,0,0,.6);}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#1B1B1B; --surface:#262626; --row-read:#222325; --hover:#2F3338;
+  --ink:#E3E3E3; --ink-2:#C4C7C5; --ink-3:#9AA0A6; --line:#3A3A3A; --line-2:#303030;
+  --blue:#A8C7FA; --blue-soft:#004A77; --compose:#004A77; --search:#333538;
+  --drift:#6FCFC5; --drift-soft:#173B38; --drift-line:#2F6B65; --drift-pale:#152826; --drift-pale-line:#244A46; --on-drift:#062220;
+  --amber:#F1C06B; --amber-soft:#3A2C0E; --amber-line:#6B5220;
+  --green:#7FD196; --green-soft:#18341F;
+  --snack:#E3E3E3; --snack-ink:#1F1F1F; --snack-link:#0B57D0;
+  --bar:#0E141A; --bar-ink:#C9D3DC; --shadow:0 1px 3px rgba(0,0,0,.6);}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.43;display:flex;flex-direction:column}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:none}
+button:focus-visible,[contenteditable]:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+svg.i{width:20px;height:20px;fill:currentColor;flex:none}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* prototype story bar */
+.storybar{background:var(--bar);color:var(--bar-ink);padding:8px 16px 10px;display:flex;flex-direction:column;gap:6px}
+.sb-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sb-tag{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.65;margin-right:4px}
+.sb-step{border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:4px 12px;font-size:12.5px;color:var(--bar-ink);display:flex;gap:6px;align-items:center}
+.sb-step b{font-family:var(--mono);font-weight:500;opacity:.7}
+.sb-step[aria-current="true"]{background:#6FCFC5;border-color:#6FCFC5;color:#062220}
+.sb-sp{flex:1}
+.sb-reset{font-size:12.5px;color:var(--bar-ink);opacity:.75;padding:4px 8px}
+.sb-story{font-size:13px;opacity:.9;max-width:110ch}
+.sb-story i{opacity:.7}
+
+/* gmail-like shell */
+.top{display:flex;align-items:center;gap:8px;padding:8px 16px 8px 8px;height:64px}
+.icon-btn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2)}
+.icon-btn:hover{background:var(--hover)}
+.brand{display:flex;align-items:center;gap:8px;width:190px;padding-left:4px;font-size:22px;color:var(--ink-2)}
+.brand svg{width:30px;height:30px}
+.search{flex:1;max-width:720px;height:48px;border-radius:24px;background:var(--search);display:flex;align-items:center;gap:12px;padding:0 16px;color:var(--ink-2);min-width:0}
+.search span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-sp{flex:1}
+.avatar{width:32px;height:32px;border-radius:50%;background:#7B5CC4;color:#fff;display:grid;place-items:center;font-weight:500;margin-left:8px;flex:none}
+
+.shell{flex:1;min-height:0;display:grid;grid-template-columns:256px minmax(0,1fr);padding-right:16px;padding-bottom:16px}
+.nav{padding:0 12px 16px 8px;overflow:auto}
+.compose{background:var(--compose);border-radius:16px;height:56px;padding:0 24px 0 16px;display:inline-flex;align-items:center;gap:12px;font-weight:500;margin:8px 0 16px;color:var(--ink);box-shadow:none}
+.compose:hover{box-shadow:var(--shadow)}
+.nav-item{display:flex;align-items:center;gap:18px;height:32px;padding:0 12px 0 18px;border-radius:0 16px 16px 0;width:100%;color:var(--ink);text-align:left;margin-left:-8px;width:calc(100% + 8px)}
+.nav-item:hover{background:var(--hover)}
+.nav-item .n{margin-left:auto;font-size:12px;font-weight:700}
+.nav-item.bold{font-weight:700}
+.nav-item[aria-current="page"]{background:var(--blue-soft);font-weight:700}
+.nav-h{font-size:16px;font-weight:500;padding:16px 0 6px 10px;display:flex;align-items:center;gap:8px}
+.nav-h .dm{width:22px;height:22px;border-radius:6px;background:var(--drift);display:grid;place-items:center;flex:none}
+.nav-item.drift svg.i{color:var(--drift)}
+.nav-item .pill{margin-left:auto;background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-line);font-size:11.5px;font-weight:700;border-radius:10px;padding:0 7px;line-height:18px}
+
+.main{background:var(--surface);border-radius:16px;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{display:flex;align-items:center;gap:4px;padding:8px 16px;min-height:48px;color:var(--ink-2)}
+.toolbar .count{margin-left:auto;font-size:12px;color:var(--ink-3)}
+.cats{display:flex;border-bottom:1px solid var(--line)}
+.cat{flex:1;max-width:250px;display:flex;align-items:center;gap:14px;padding:0 16px;height:56px;color:var(--ink-2);border-bottom:3px solid transparent;font-weight:500;text-align:left}
+.cat[aria-selected="true"]{color:var(--blue);border-bottom-color:var(--blue)}
+.scroll{flex:1;overflow:auto}
+
+/* rows */
+.row{display:grid;grid-template-columns:24px 24px 200px minmax(0,1fr) auto;gap:10px;align-items:center;height:40px;padding:0 16px 0 12px;border-bottom:1px solid var(--line-2);background:var(--row-read);cursor:pointer;color:var(--ink)}
+.row.unread{background:var(--surface);font-weight:700}
+.row:hover{box-shadow:inset 1px 0 0 #dadce0,inset -1px 0 0 #dadce0,0 1px 2px 0 rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15);position:relative;z-index:1}
+.row .box{width:16px;height:16px;border:2px solid var(--ink-3);border-radius:2px;opacity:.6}
+.row .star{color:var(--ink-3);opacity:.5}
+.row .from{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .line{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}
+.row .subj{flex:none}
+.row .snip{color:var(--ink-3);font-weight:400;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.row .time{font-size:12px;text-align:right}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;border-radius:4px;padding:0 6px;line-height:20px;white-space:nowrap;flex:none}
+.chip svg{width:12px;height:12px}
+.chip.review{background:var(--amber-soft);color:var(--amber)}
+.chip.draft{background:var(--drift-soft);color:var(--drift)}
+.chip.label{background:var(--line);color:var(--ink-2);font-weight:400}
+.chip.done{background:var(--green-soft);color:var(--green)}
+
+/* folder intro */
+.intro{display:flex;gap:12px;align-items:flex-start;margin:4px 16px 12px;padding:12px 16px;border-radius:12px;background:var(--drift-soft);color:var(--ink)}
+.intro .dm{width:28px;height:28px;border-radius:8px;background:var(--drift);display:grid;place-items:center;flex:none}
+.intro b{font-weight:500}
+.intro p{margin:2px 0 0;color:var(--ink-2);font-size:13px}
+.intro > div{flex:1;min-width:0}
+.intro .x{width:32px;height:32px;margin:-4px -8px -4px 0;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);flex:none}
+.intro .x:hover{background:var(--drift-line)}
+
+/* review rows */
+.rv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;padding:12px 16px;border-bottom:1px solid var(--line-2);align-items:center}
+.rv:hover{background:var(--hover)}
+.rv .rv-head{display:flex;gap:10px;align-items:baseline;min-width:0;cursor:pointer}
+.rv .from{font-weight:700;white-space:nowrap}
+.rv .subj{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)}
+.rv .sugg{grid-column:1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
+.rv .sugg b{color:var(--ink);font-weight:500}
+.rv .acts{grid-row:1/3;grid-column:2;display:flex;gap:8px;align-items:center}
+.why-chip{font-size:11.5px;border:1px solid var(--line);border-radius:10px;padding:0 8px;line-height:20px;color:var(--ink-2)}
+.btn{height:36px;border-radius:18px;padding:0 16px;font-weight:500;border:1px solid var(--ink-3);color:var(--blue);white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{background:var(--hover)}
+.btn.fill{background:var(--blue);border-color:var(--blue);color:var(--surface)}
+.btn.fill:hover{filter:brightness(1.08)}
+.btn.drift{background:var(--drift);border-color:var(--drift);color:var(--on-drift)}
+.btn.text{border-color:transparent}
+.btn.sm{height:32px;padding:0 14px;font-size:13px}
+.learn{grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--green-soft);color:var(--green);border-radius:8px;padding:8px 12px;font-size:13px}
+.learn .q{color:var(--ink);flex:1;min-width:200px}
+.learn .btn{height:30px;font-size:13px;color:var(--green);border-color:var(--green)}
+.learn .btn.fill{background:var(--green);color:var(--surface)}
+.empty{text-align:center;padding:64px 16px;color:var(--ink-3)}
+.empty strong{display:block;color:var(--ink);font-size:18px;font-weight:400;margin-bottom:6px}
+
+/* message view */
+.msg{padding:8px 24px 32px 72px;display:flex;flex-direction:column;gap:16px;max-width:980px}
+.msg h1{font-size:22px;font-weight:400;margin:4px 0 0;text-wrap:balance}
+.sender{display:flex;gap:12px;align-items:flex-start;margin-left:-56px}
+.sender .av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:500;flex:none}
+.sender .nm b{font-weight:700}
+.sender .nm span{color:var(--ink-3);font-size:12px}
+.sender .t{margin-left:auto;font-size:12px;color:var(--ink-3)}
+.body{white-space:pre-wrap;color:var(--ink)}
+.dm-card{border:1px solid var(--drift-line);border-radius:16px;background:var(--surface);overflow:hidden}
+.dm-card .hd{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--drift-soft)}
+.dm-card .hd .dm{width:24px;height:24px;border-radius:7px;background:var(--drift);display:grid;place-items:center;flex:none}
+.dm-card .hd b{font-weight:500}
+.dm-card .hd .r{margin-left:auto;font-size:12px;color:var(--ink-2)}
+.dm-card .bd{padding:16px;display:flex;flex-direction:column;gap:12px}
+.reasons{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--ink-2)}
+.reasons li{display:grid;grid-template-columns:16px 1fr;gap:8px}
+.reasons li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--drift);margin:7px 0 0 4px}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* draft */
+.to{display:flex;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line-2);font-size:13px;color:var(--ink-2)}
+.editor{padding:14px 16px;min-height:170px;white-space:pre-wrap;outline:none;line-height:1.6}
+.editor mark{background:var(--amber-soft);color:inherit;border-bottom:2px solid var(--amber);padding:0 1px}
+.editor mark{cursor:help}
+.tip{position:fixed;z-index:40;max-width:320px;display:flex;gap:8px;padding:8px 12px;border-radius:8px;background:var(--surface);color:var(--ink-2);border:1px solid var(--amber-line);box-shadow:var(--shadow);font-size:13px;line-height:1.4;pointer-events:none}
+.tip b{color:var(--amber)}
+.tip::after{content:"";position:absolute;left:var(--ax,24px);bottom:-6px;width:10px;height:10px;background:var(--surface);border-right:1px solid var(--amber-line);border-bottom:1px solid var(--amber-line);transform:translateX(-50%) rotate(45deg)}
+.tip.below::after{bottom:auto;top:-6px;transform:translateX(-50%) rotate(225deg)}
+.used{margin:0 16px;background:var(--drift-pale);border:1px solid var(--drift-pale-line);border-radius:8px;padding:10px 12px}
+.used summary{cursor:pointer;color:var(--drift);font-size:13px;font-weight:500}
+.used dl{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;margin:10px 0 2px;font-size:13px}
+.used dt{color:var(--ink-2)}
+.used dd{margin:0;color:var(--ink-2)}
+.draft-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px 16px}
+.draft-foot .note{font-size:12px;color:var(--ink-3);margin-left:auto;display:flex;gap:6px;align-items:center}
+.sent-state{display:flex;gap:10px;align-items:center;padding:14px 16px;color:var(--green);background:var(--green-soft)}
+
+/* snackbar */
+.snack{position:fixed;left:24px;bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--snack);color:var(--snack-ink);border-radius:4px;padding:14px 16px;display:flex;align-items:center;gap:24px;box-shadow:0 3px 5px rgba(0,0,0,.2),0 6px 10px rgba(0,0,0,.14);z-index:30;max-width:calc(100vw - 48px);font-size:14px}
+.snack button{color:var(--snack-link);font-weight:500}
+.snack .x{color:var(--snack-ink);opacity:.7}
+
+@media (max-width:980px){
+  .shell{grid-template-columns:1fr;padding:0 8px 8px}
+  .nav{position:fixed;left:0;top:0;bottom:0;width:272px;background:var(--bg);z-index:25;box-shadow:var(--shadow);padding-top:12px;transform:translateX(-100%);transition:transform .2s,visibility .2s;visibility:hidden}
+  body.nav-open .nav{transform:none;visibility:visible}
+  .brand{width:auto}
+  .brand .word{display:none}
+  .msg{padding:8px 16px 24px}
+  .sender{margin-left:0}
+  .row{grid-template-columns:minmax(0,1fr) auto;height:auto;padding:10px 12px;gap:2px 8px}
+  .row .box,.row .star{display:none}
+  .row .line{grid-column:1/-1;flex-wrap:wrap;white-space:normal}
+  .row .snip{white-space:nowrap}
+  .row .time{grid-row:1;grid-column:2}
+  .rv{grid-template-columns:1fr}
+  .rv .acts{grid-row:auto;grid-column:1;flex-wrap:wrap}
+  .cats .cat:not(:first-child){display:none}
+  .top .hide-sm{display:none}
+}
+@media (prefers-reduced-motion:reduce){.nav{transition:none}}
+</style>
+
+<div class="storybar" role="region" aria-label="Prototype: user stories">
+  <div class="sb-top">
+    <span class="sb-tag">Driftmail prototype</span>
+    <button class="sb-step" data-story="1"><b>1</b>Review Driftmail’s calls</button>
+    <button class="sb-step" data-story="2"><b>2</b>Approve drafted replies</button>
+    <span class="sb-sp"></span>
+    <button class="sb-reset" id="reset">Reset</button>
+  </div>
+  <div class="sb-story" id="story"></div>
+</div>
+
+<header class="top">
+  <button class="icon-btn" id="menu" aria-label="Main menu"><svg class="i" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></button>
+  <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="7" width="26" height="19" rx="4" fill="#0B57D0"/><path d="M5 10l11 8 11-8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg><span class="word">Mail</span></div>
+  <div class="search"><svg class="i" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><span>Search mail</span></div>
+  <span class="top-sp"></span>
+  <button class="icon-btn hide-sm" aria-label="Help"><svg class="i" viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm0-14a4 4 0 00-4 4h2a2 2 0 114 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 00-4-4z"/></svg></button>
+  <button class="icon-btn hide-sm" aria-label="Settings"><svg class="i" viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.03 7.03 0 00-1.62-.94l-.36-2.54a.48.48 0 00-.48-.41h-3.84a.48.48 0 00-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.48.48 0 00.12.61l2.03 1.58a7.1 7.1 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
+  <div class="avatar" aria-hidden="true">A</div>
+</header>
+
+<div class="shell">
+  <nav class="nav" id="nav" aria-label="Folders"></nav>
+  <main class="main" id="main"></main>
+</div>
+
+<div id="snackHost"></div>
+<div class="tip" id="tip" role="tooltip" hidden><b>!</b><span></span></div>
+
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const WAVE = c => `<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 10c2-3 4-3 6 0s4 3 6 0" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M2 5.5c2-3 4-3 6 0s4 3 6 0" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" opacity=".55"/></svg>`;
+const I = {
+  inbox:'<path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H5v-3h3.56a4 4 0 006.88 0H19v3zm0-5h-4.99a2 2 0 01-4 0H5V5h14v9z"/>',
+  star:'<path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"/>',
+  clock:'<path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/>',
+  send:'<path d="M3 20V4l19 8-19 8zm2-3l11.85-5L5 7v3.5l6 1.5-6 1.5V17z"/>',
+  draft:'<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>',
+  label:'<path d="M17.63 5.84A2 2 0 0016 5H5a2 2 0 00-2 2v10a2 2 0 002 2h11c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16zM16 17H5V7h11l3.55 5L16 17z"/>',
+  archive:'<path d="M20.54 5.23l-1.39-1.68A1.45 1.45 0 0018 3H6c-.47 0-.88.21-1.16.55L3.46 5.23A1.99 1.99 0 003 6.5V19a2 2 0 002 2h14a2 2 0 002-2V6.5c0-.48-.17-.93-.46-1.27zM6.24 5h11.52l.81.97H5.44l.8-.97zM5 19V8h14v11H5zm8.45-9h-2.9v3H8l4 4 4-4h-2.55z"/>',
+  review:'<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/>',
+  reply:'<path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/>',
+  back:'<path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>',
+  promo:'<path d="M21.41 11.58l-9-9A2 2 0 0011 2H4a2 2 0 00-2 2v7c0 .55.22 1.05.59 1.42l9 9a2 2 0 002.82 0l7-7a2 2 0 000-2.84zM5.5 7a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>',
+  people:'<path d="M16 11a3 3 0 100-6 3 3 0 000 6zm-8 0a3 3 0 100-6 3 3 0 000 6zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05A4.22 4.22 0 0117 16.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>',
+  close:'<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>',
+  info:'<path d="M11 7h2v2h-2V7zm0 4h2v6h-2v-6zm1-9a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z"/>'
+};
+const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
+
+const STORIES = {
+  1:'<b>Story 1.</b> As a user I want to see the items that need my review in a mailbox folder, <i>so that Driftmail learns from my decisions and makes better calls next time.</i>',
+  2:'<b>Story 2.</b> As a user I want to see emails where Driftmail drafted a reply, <i>so that I can review and approve it before it’s sent.</i>'
+};
+const VIEW_STORY = {review:1, reviewItem:1, drafts:2, draftItem:2};
+
+function fresh(){ return {
+  view:'inbox', open:null,
+  inbox:[
+    {id:'m1', from:'Dana Okafor', av:'#C5221F', email:'dana@yourco.com', subj:'Slides for Thursday?', snip:'Could you send the Q4 review slides by Thursday noon? I want to add the hiring numbers before…', time:'9:12', unread:true, draft:'dana',
+      body:'Hi Alex,\n\nCould you send the Q4 review slides by Thursday noon? I want to add the hiring numbers before the leadership sync.\n\nThanks,\nDana'},
+    {id:'m2', from:'Marta Lin', av:'#1A73E8', email:'marta@acme.co', subj:'Re: Q4 rollout timeline', snip:'Quick check before our board prep: are we still on for mid-October for all regions?', time:'8:47', unread:true, draft:'marta',
+      body:'Hi Alex,\n\nQuick check before our board prep: are we still on for mid-October for all regions? And could your team walk us through the plan this week?\n\nBest,\nMarta'},
+    {id:'m3', from:'Jonas Weber', av:'#8430CE', email:'jonas@northpeak.io', subj:'Partnership idea: Northpeak × your team', snip:'Hi, I lead partnerships at Northpeak. We help product teams cut QA time by…', time:'8:30', unread:true, review:'r1',
+      body:'Hi Alex,\n\nI lead partnerships at Northpeak. We help product teams cut QA time by 40% with automated test generation. Would you be open to a 20-minute call next week?\n\nBest,\nJonas Weber\nHead of Partnerships, Northpeak'},
+    {id:'m4', from:'Sam Reyes', av:'#E37400', email:'sam.reyes@fastmail.com', subj:'Quick question about your talk', snip:'Hi! I saw your talk at the design meetup on Thursday and wanted to ask…', time:'8:05', unread:true, review:'r2',
+      body:'Hi Alex!\n\nI saw your talk at the design meetup on Thursday and wanted to ask whether the slides are available anywhere. The part about review queues was really useful for my team.\n\nThanks,\nSam'},
+    {id:'m5', from:'Figma', av:'#0F9D58', email:'billing@figma.com', subj:'Your receipt for September', snip:'Receipt #2231-0917. Professional plan, 3 editors, €45.00', time:'7:58', review:'r3',
+      body:'Receipt #2231-0917\n\nProfessional plan, 3 editors\nAmount paid: €45.00\nBilling period: 1–30 Sep 2026'},
+    {id:'m6', from:'Priya Nair', av:'#137333', email:'priya@yourco.com', subj:'Standup notes, Mon', snip:'Blocked on API review, Leo picks up onboarding copy…', time:'7:41', label:'Team', body:'Blocked on API review, Leo picks up onboarding copy. Crit moved to Wed 14:00.'},
+    {id:'m7', from:'Allegro', av:'#FF5A00', email:'no-reply@allegro.pl', subj:'Your order has shipped', snip:'Parcel 3 of 3 is on its way. Track your delivery…', time:'7:20', review:'r4',
+      body:'Parcel 3 of 3 is on its way.\n\nEstimated delivery: Wed 30 Sep. Track your delivery in the app.\n\nAlso this week: up to 30% off home & garden.'},
+    {id:'m8', from:'Morning Brew', av:'#1F1F1F', email:'crew@morningbrew.com', subj:'The market had a day', snip:'Plus: what’s next for chipmakers, and a very good dog…', time:'6:30', review:'r5',
+      body:'Good morning. The market had a day. Plus: what’s next for chipmakers, and a very good dog.'},
+    {id:'m9', from:'Leo Martins', av:'#B06000', email:'leo@gmail.com', subj:'Dinner Friday?', snip:'We’re thinking the new place on Mokotowska, 19:30?', time:'Sun', unread:true, body:'We’re thinking the new place on Mokotowska, 19:30?'},
+    {id:'m10', from:'GitHub', av:'#444746', email:'notifications@github.com', subj:'[web] PR #412 merged', snip:'Merged into main by leo-m. 3 files changed…', time:'Sun', label:'Notifications', body:'Merged into main by leo-m. 3 files changed.'}
+  ],
+  review:{
+    r1:{doneText:'Archived', mail:'m3', why:'First-time sender', suggest:'Archive', alt:'Keep in inbox', reasons:['You’ve never exchanged email with Jonas or anyone at northpeak.io','Reads like a sales template (same text sent to 3 people at your company)','First-time senders always wait for you']},
+    r2:{doneText:'Archived', mail:'m4', why:'First-time sender', suggest:'Archive', alt:'Keep in inbox', reasons:['You’ve never exchanged email with Sam','Mentions your talk by name, so it may be personal','First-time senders always wait for you']},
+    r3:{doneText:'Labeled Receipts & archived', mail:'m5', why:'Unsure', suggest:'Label Receipts & archive', alt:'Keep in inbox', cat:'label', reasons:['Looks like a receipt from a service you pay for','But you replied to a Figma billing email last month, so it might matter to you']},
+    r4:{doneText:'Archived', mail:'m7', why:'Unsure', suggest:'Archive', alt:'Keep in inbox', cat:'promo', reasons:['Sender mostly sends promotions','But this one is an order update with a delivery date']},
+    r5:{doneText:'Archived', mail:'m8', why:'Set to “Ask me”', suggest:'Archive', alt:'Keep in inbox', cat:'news', promote:true, reasons:['Newsletter you opened 1 of the last 20 times','Newsletters are set to “Ask me”, so Driftmail shows you first']}
+  },
+  decided:{}, // rid -> {choice, took, learned}
+  drafts:{
+    marta:{mail:'m2', to:'Marta Lin <marta@acme.co>', tag:'Client',
+      body:'Hi Marta,\n\nThanks for checking in. We’re on track for the 14 Oct rollout for the first two regions. [[The remaining three follow on 28 Oct]], once the migration checks pass.\n\nI can walk your team through the plan on Thursday at 15:00 or Friday at 10:00. Would either work?\n\nBest,\nAlex',
+      check:'Please check this date. It comes from “Q4 rollout plan v2.pdf” (12 Sep), and a newer v3 is in your Drive.',
+      used:[['Thread','Marta asked to confirm the timeline and for a walkthrough'],['Your file','Dates from “Q4 rollout plan v2.pdf”, sent 12 Sep'],['Calendar','Free: Thu 15:00–16:00, Fri 10:00–11:00'],['Your style','Matched to your last 14 replies to Marta']]},
+    dana:{mail:'m1', to:'Dana Okafor <dana@yourco.com>', tag:'Manager',
+      body:'Hi Dana,\n\nYes, I’ll send the Q4 review slides by Thursday 12:00. I’ll share a draft on Wednesday evening in case you want to add the hiring numbers early.\n\nAlex',
+      check:null,
+      used:[['Thread','Dana asked for the Q4 review slides by Thursday noon'],['Calendar','2-hour focus block on Wed 16:00, enough for a draft'],['Your style','Matched to your replies to Dana: brief, no sign-off']]}
+  },
+  sent:{}, // key -> true
+  hiddenIntros:{}, // view -> true once dismissed
+  perms:{
+    actions:[
+      {k:'label', n:'Label and sort', d:'Add labels like Team, Receipts, Notifications', level:'auto', rec:[57,58]},
+      {k:'promo', n:'Archive promotions', d:'Sales and deals from bulk senders', level:'auto', rec:[41,42]},
+      {k:'news', n:'Archive newsletters', d:'Newsletters you rarely open', level:'ask', rec:[23,24], who:'newsletter'},
+      {k:'unsub', n:'Unsubscribe', d:'From mailing lists you never open', level:'ask', rec:[6,6], noAuto:'Always asks, because it can’t always be undone'},
+      {k:'send', n:'Reply or forward', d:'Driftmail drafts, you press Send', level:'ask', rec:null, noAuto:'Never automatic. Driftmail can’t send as you.'}
+    ]
+  }
+};}
+
+let S = fresh();
+
+/* ---------- counts ---------- */
+const openReviews = () => Object.keys(S.review).filter(r => !S.decided[r]);
+const openDrafts = () => Object.keys(S.drafts).filter(k => !S.sent[k] && !S.drafts[k].discarded);
+const mailById = id => S.inbox.find(m => m.id === id);
+const actionByKey = k => S.perms.actions.find(a => a.k === k);
+
+/* ---------- nav ---------- */
+function renderNav(){
+  const cur = S.view.replace('Item','');
+  const item = (v, icon, label, n, cls='') => `<button class="nav-item ${cls}" data-go="${v}" ${cur===v?'aria-current="page"':''}>${ic(icon)}<span>${label}</span>${n}</button>`;
+  const inboxN = S.inbox.filter(m=>m.unread && !m.archived).length;
+  const rN = openReviews().length, dN = openDrafts().length;
+  $('#nav').innerHTML = `
+    <button class="compose">${'<svg class="i" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'}Compose</button>
+    ${item('inbox','inbox','Inbox', inboxN?`<span class="n">${inboxN}</span>`:'', inboxN?'bold':'')}
+    ${item('x-star','star','Starred','')}
+    ${item('x-snooze','clock','Snoozed','')}
+    ${item('x-sent','send','Sent','')}
+    ${item('x-drafts','draft','Drafts','<span class="n" style="font-weight:400">3</span>')}
+    ${item('x-arch','archive','Archive','')}
+    <div class="nav-h"><span class="dm">${WAVE('var(--on-drift)')}</span>Driftmail</div>
+    ${item('review','review','Needs your review', rN?`<span class="pill">${rN}</span>`:'', 'drift'+(rN?' bold':''))}
+    ${item('drafts','reply','Drafts to approve', dN?`<span class="pill">${dN}</span>`:'', 'drift'+(dN?' bold':''))}
+    <div class="nav-h">Labels</div>
+    ${item('x-l1','label','Team','')}
+    ${item('x-l2','label','Receipts','')}
+    ${item('x-l3','label','Notifications','')}
+    ${item('x-l4','label','Personal','')}`;
+}
+
+/* ---------- views ---------- */
+let lastScreen = null;
+function render(){
+  renderNav();
+  const st = VIEW_STORY[S.view];
+  document.querySelectorAll('.sb-step').forEach(b => b.setAttribute('aria-current', String(+b.dataset.story===st)));
+  $('#story').innerHTML = st ? STORIES[st] : 'Pick a story above, or explore the inbox. Driftmail’s folders are in the left menu.';
+  const m = $('#main');
+  const v = S.view;
+  // keep the scroll position when re-rendering the same screen; start at the top on a new one
+  const screen = v + ':' + S.open, prev = m.querySelector('.scroll');
+  const keep = screen === lastScreen && prev ? prev.scrollTop : 0;
+  lastScreen = screen;
+  m.innerHTML = v==='inbox' ? inboxView() : v==='review' ? reviewView() : v==='reviewItem' ? reviewItem() : v==='drafts' ? draftsView() : v==='draftItem' ? draftItem() : placeholder();
+  const sc = m.querySelector('.scroll'); if (sc) sc.scrollTop = keep;
+}
+
+function chipFor(m){
+  const c = [];
+  if (m.draft && !S.sent[m.draft] && !S.drafts[m.draft].discarded) c.push(`<span class="chip draft">${WAVE('currentColor')}Draft to approve</span>`);
+  if (m.draft && S.sent[m.draft]) c.push(`<span class="chip done">Replied</span>`);
+  if (m.review && !S.decided[m.review]) c.push(`<span class="chip review">${WAVE('currentColor')}Needs review</span>`);
+  if (m.label) c.push(`<span class="chip label">${esc(m.label)}</span>`);
+  return c.join('');
+}
+function rowHtml(m, go){
+  return `<div class="row ${m.unread?'unread':''}" data-open="${m.id}" data-go-open="${go}" role="button" tabindex="0">
+    <span class="box" aria-hidden="true"></span><span class="star">${ic('star')}</span>
+    <span class="from">${esc(m.from)}</span>
+    <span class="line"><span class="subj">${esc(m.subj)}</span>${chipFor(m)}<span class="snip">– ${esc(m.snip)}</span></span>
+    <span class="time">${esc(m.time)}</span></div>`;
+}
+function inboxView(){
+  const list = S.inbox.filter(m=>!m.archived);
+  return `<div class="toolbar"><span class="box" style="width:18px;height:18px;border:2px solid var(--ink-3);border-radius:2px;opacity:.6;margin:0 8px"></span><button class="icon-btn" aria-label="Refresh"><svg class="i" viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L13 11h7V4l-2.35 2.35z"/></svg></button><span class="count">1–${list.length} of ${list.length}</span></div>
+    <div class="cats" role="tablist"><button class="cat" aria-selected="true">${ic('inbox')}Primary</button><button class="cat" aria-selected="false">${ic('promo')}Promotions</button><button class="cat" aria-selected="false">${ic('people')}Social</button><button class="cat" aria-selected="false">${ic('info')}Updates</button></div>
+    <div class="scroll">${list.map(m=>rowHtml(m, m.review&&!S.decided[m.review]?'reviewItem':m.draft&&openDrafts().includes(m.draft)?'draftItem':'inbox')).join('')}</div>`;
+}
+
+function introHtml(key, title, text){
+  if (S.hiddenIntros[key]) return '';
+  return `<div class="intro"><span class="dm">${WAVE('var(--on-drift)')}</span><div><b>${title}</b><p>${text}</p></div><button class="x" data-hide-intro="${key}" aria-label="Dismiss">${ic('close')}</button></div>`;
+}
+
+/* ---- story 1: review ---- */
+function reviewView(){
+  const ids = Object.keys(S.review);
+  const pending = ids.filter(r=>!S.decided[r]);
+  const done = ids.filter(r=>S.decided[r]);
+  return `<div class="toolbar"><span style="font-size:18px;color:var(--ink);padding-left:8px">Needs your review</span><span class="count">${pending.length} waiting</span></div>
+    ${introHtml('review', 'Driftmail didn’t act on these emails.', 'They’re from first-time senders, Driftmail wasn’t sure, or that kind of action is set to “Ask me”. Each decision adds to Driftmail’s track record, and when it looks right you can hand that action over.')}
+    <div class="scroll">
+      ${pending.length ? pending.map(rvRow).join('') : `<div class="empty"><strong>You’re all caught up</strong>Driftmail will put anything it isn’t sure about here.</div>`}
+      ${done.length ? `<div style="padding:16px 16px 6px;font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;font-weight:500">Decided today</div>${done.map(rvRow).join('')}`:''}
+    </div>`;
+}
+function rvRow(rid){
+  const r = S.review[rid], m = mailById(r.mail), d = S.decided[rid];
+  const head = `<div class="rv-head" data-open="${m.id}" data-go-open="reviewItem" role="button" tabindex="0"><span class="from">${esc(m.from)}</span><span class="subj">${esc(m.subj)}</span></div>`;
+  if (d){
+    return `<div class="rv">${head}<div class="sugg"><span class="chip done">${esc(d.choice)}</span>${d.learned?`<span>${esc(d.learned)}</span>`:''}</div>
+      ${d.learned===undefined ? learnHtml(rid) : ''}</div>`;
+  }
+  return `<div class="rv">${head}
+    <div class="sugg"><span class="why-chip">${esc(r.why)}</span><span>Driftmail would <b>${esc(r.suggest.toLowerCase())}</b></span></div>
+    <div class="acts"><button class="btn sm fill" data-decide="${rid}" data-choice="suggest">${esc(r.suggest)}</button><button class="btn sm" data-decide="${rid}" data-choice="alt">${esc(r.alt)}</button></div></div>`;
+}
+function learnHtml(rid){
+  const a = actionByKey(S.review[rid].cat);
+  const q = `You’ve agreed with ${a.rec[0]} of ${a.rec[1]} ${a.who} calls. Let Driftmail ${a.n.toLowerCase()} on its own from now on?`;
+  return `<div class="learn"><span>${WAVE('currentColor')}</span><span class="q">${esc(q)}</span><button class="btn fill" data-learn="${rid}" data-v="auto">Yes, make it automatic</button><button class="btn" data-learn="${rid}" data-v="ask">Keep asking me</button></div>`;
+}
+function reviewItem(){
+  const m = mailById(S.open); const rid = m.review; const r = S.review[rid]; const d = S.decided[rid];
+  return `<div class="toolbar"><button class="icon-btn" data-go="review" aria-label="Back to Needs your review">${ic('back')}</button><button class="icon-btn" aria-label="Archive">${ic('archive')}</button><span class="count">Needs your review</span></div>
+    <div class="scroll"><div class="msg">
+      <h1>${esc(m.subj)} <span class="chip review" style="vertical-align:middle">Needs review</span></h1>
+      <div class="dm-card">
+        <div class="hd"><span class="dm">${WAVE('var(--on-drift)')}</span><b>${d?'You decided: '+esc(d.choice):'Driftmail would '+esc(r.suggest.toLowerCase())+', but wants your call'}</b><span class="r">${esc(r.why)}</span></div>
+        <div class="bd">
+          <ul class="reasons">${r.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+          ${d ? (d.learned===undefined ? `<div class="rv" style="padding:0;border:none">${learnHtml(rid)}</div>` : `<div class="sugg" style="font-size:13px;color:var(--green)">${esc(d.learned)}</div>`)
+              : `<div class="row-btns"><button class="btn fill" data-decide="${rid}" data-choice="suggest">${esc(r.suggest)}</button><button class="btn" data-decide="${rid}" data-choice="alt">${esc(r.alt)}</button></div>`}
+        </div>
+      </div>
+      <div class="sender"><span class="av" style="background:${m.av}">${esc(m.from[0])}</span><span class="nm"><b>${esc(m.from)}</b> <span>&lt;${esc(m.email)}&gt;</span><br><span>to me</span></span><span class="t">${esc(m.time)}</span></div>
+      <div class="body">${esc(m.body)}</div>
+    </div></div>`;
+}
+
+/* ---- story 3 ---- */
+function draftsView(){
+  const keys = Object.keys(S.drafts);
+  const open = keys.filter(k=>!S.sent[k] && !S.drafts[k].discarded);
+  const closed = keys.filter(k=>S.sent[k] || S.drafts[k].discarded);
+  const row = k => { const d=S.drafts[k], m=mailById(d.mail);
+    const state = S.sent[k] ? '<span class="chip done">Sent by you</span>' : d.discarded ? '<span class="chip label">Discarded</span>' : `<span class="chip draft">${WAVE('currentColor')}Draft ready</span>${d.check?'<span class="chip review">1 thing to check</span>':''}`;
+    return `<div class="row ${!S.sent[k]&&!d.discarded?'unread':''}" data-open="${m.id}" data-go-open="draftItem" role="button" tabindex="0"><span class="box"></span><span class="star">${ic('star')}</span><span class="from">${esc(m.from)} <span style="font-weight:400;color:var(--ink-3)">· ${esc(d.tag)}</span></span><span class="line"><span class="subj">${esc(m.subj)}</span>${state}<span class="snip">– ${esc(d.body.replace(/\[\[|\]\]/g,'').split('\n').filter(Boolean)[1])}</span></span><span class="time">${esc(m.time)}</span></div>`; };
+  return `<div class="toolbar"><span style="font-size:18px;color:var(--ink);padding-left:8px">Drafts to approve</span><span class="count">${open.length} waiting</span></div>
+    ${introHtml('drafts', 'Driftmail drafted these replies. It never sends them.', 'Open one to check it, edit anything, and send it yourself. Your edits teach Driftmail how you write.')}
+    <div class="scroll">${open.map(row).join('') || `<div class="empty"><strong>No drafts waiting</strong>When Driftmail drafts a reply, it shows up here and on the email in your inbox.</div>`}${closed.map(row).join('')}</div>`;
+}
+function draftItem(){
+  const m = mailById(S.open); const k = m.draft; const d = S.drafts[k];
+  const html = esc(d.body).replace(/\[\[(.+?)\]\]/g, d.check ? '<mark aria-describedby="tip">$1</mark>' : '<mark>$1</mark>');
+  let composer;
+  if (S.sent[k]) composer = `<div class="dm-card"><div class="sent-state">${ic('send')}<span>Sent by you at ${esc(S.sent[k].time)}${S.sent[k].edited?'. Driftmail noted your edits for next time.':'.'}</span></div><div class="editor" style="color:var(--ink-2)">${esc(S.sent[k].text)}</div></div>${rateHtml(k)}`;
+  else if (d.discarded) composer = `<div class="dm-card"><div class="sent-state" style="color:var(--ink-2);background:var(--bg)">Draft discarded. You’ll reply yourself.</div></div>`;
+  else composer = `<div class="dm-card">
+      <div class="hd"><span class="dm">${WAVE('var(--on-drift)')}</span><b>Reply drafted by Driftmail</b><span class="r">Not sent. Waiting for approval.</span></div>
+      <div class="to">${ic('reply')}<span>${esc(d.to)}</span><span class="chip label">${esc(d.tag)}</span></div>
+      <div class="editor" id="editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Reply draft">${html}</div>
+      <details class="used" ${d.check?'':'open'}><summary>What Driftmail used to write this</summary><dl>${d.used.map(u=>`<dt>${esc(u[0])}</dt><dd>${esc(u[1])}</dd>`).join('')}</dl></details>
+      <div class="draft-foot"><button class="btn fill" data-send="${k}">${ic('send')}Send</button><button class="btn" data-savedraft="${k}">Save to Drafts</button><button class="btn text" data-discard="${k}">Discard</button><span class="note">${WAVE('var(--drift)')}Only you can press Send</span></div>
+    </div>`;
+  return `<div class="toolbar"><button class="icon-btn" data-go="drafts" aria-label="Back to Drafts to approve">${ic('back')}</button><button class="icon-btn" aria-label="Archive">${ic('archive')}</button><span class="count">Drafts to approve</span></div>
+    <div class="scroll"><div class="msg">
+      <h1>${esc(m.subj)}</h1>
+      <div class="sender"><span class="av" style="background:${m.av}">${esc(m.from[0])}</span><span class="nm"><b>${esc(m.from)}</b> <span>&lt;${esc(m.email)}&gt;</span><br><span>to me</span></span><span class="t">${esc(m.time)}</span></div>
+      <div class="body">${esc(m.body)}</div>
+      ${composer}
+    </div></div>`;
+}
+
+const RATE = {good:['Good as is','Driftmail will keep writing to Marta like this.'], edits:['Needed a few edits','Driftmail will learn from the changes you made.'], miss:['Not helpful','Driftmail will draft less for emails like this.']};
+function rateHtml(k){
+  const r = S.sent[k].rating;
+  if (r) return `<div class="learn"><span>${WAVE('currentColor')}</span><span class="q">Thanks. ${esc(RATE[r][1].replace('Marta', mailById(S.drafts[k].mail).from.split(' ')[0]))}</span></div>`;
+  return `<div class="learn"><span>${WAVE('currentColor')}</span><span class="q">How was Driftmail’s draft?</span>${Object.entries(RATE).map(([v,[l]],i)=>`<button class="btn${i?'':' fill'}" data-rate="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
+}
+
+function placeholder(){ return `<div class="empty"><strong>Not part of this prototype</strong>Try Inbox or the Driftmail folders.</div>`; }
+
+/* ---------- snackbar ---------- */
+let snackTimer;
+function snack(text, undo){
+  clearTimeout(snackTimer);
+  $('#snackHost').innerHTML = `<div class="snack" role="status"><span>${esc(text)}</span>${undo?'<button id="snUndo">Undo</button>':''}<button class="x" id="snX" aria-label="Dismiss">✕</button></div>`;
+  if (undo) $('#snUndo').onclick = () => { undo(); $('#snackHost').innerHTML=''; };
+  $('#snX').onclick = () => { $('#snackHost').innerHTML=''; };
+  snackTimer = setTimeout(()=>{ $('#snackHost').innerHTML=''; }, 7000);
+}
+
+/* ---------- check tooltip ---------- */
+function showTip(mk){
+  const d = S.view==='draftItem' && S.drafts[mailById(S.open).draft];
+  if (!d || !d.check) return hideTip();
+  const tip = $('#tip'); tip.querySelector('span').textContent = d.check; tip.hidden = false;
+  const r = mk.getClientRects()[0], w = tip.offsetWidth, h = tip.offsetHeight;
+  const left = Math.max(8, Math.min(r.left, innerWidth - w - 8));
+  const below = r.top - h - 10 < 8;
+  tip.classList.toggle('below', below);
+  tip.style.left = left + 'px';
+  tip.style.top = (below ? r.bottom + 10 : r.top - h - 10) + 'px';
+  tip.style.setProperty('--ax', Math.max(14, Math.min(r.left + Math.min(r.width, 60)/2 - left, w - 14)) + 'px');
+}
+function hideTip(){ $('#tip').hidden = true; }
+const caretMark = () => { const s = getSelection(); const n = s.rangeCount && s.anchorNode; const el = n && (n.nodeType===1 ? n : n.parentElement); return el && el.closest('#editor mark'); };
+document.addEventListener('mouseover', e=>{ const mk = e.target.closest && e.target.closest('#editor mark'); if (mk) showTip(mk); });
+document.addEventListener('mouseout', e=>{ const mk = e.target.closest && e.target.closest('#editor mark'); if (mk && !mk.contains(e.relatedTarget) && !caretMark()) hideTip(); });
+document.addEventListener('selectionchange', ()=>{ const mk = caretMark(); mk ? showTip(mk) : hideTip(); });
+document.addEventListener('scroll', hideTip, true);
+
+/* ---------- actions ---------- */
+function go(v){ hideTip(); S.view=v; document.body.classList.remove('nav-open'); render(); }
+function decide(rid, which){
+  const r = S.review[rid], m = mailById(r.mail), a = r.cat && actionByKey(r.cat);
+  const prevRec = a && [...a.rec];
+  if (a){ a.rec[1]++; if (which==='suggest') a.rec[0]++; }
+  const offer = r.promote && which==='suggest' && a.level==='ask';
+  S.decided[rid] = {choice: which==='suggest' ? r.doneText : 'Kept in inbox', took:which, learned: offer ? undefined : a ? `Counted in the track record for “${a.n}”` : ''};
+  if (which==='suggest' && /archive/i.test(r.suggest)) m.archived = true;
+  m.unread = false;
+  render();
+  snack(`${S.decided[rid].choice}: ${m.from}`, ()=>{ delete S.decided[rid]; m.archived=false; if (a) a.rec=prevRec; render(); });
+}
+function learn(rid, v){
+  const d = S.decided[rid], a = actionByKey(S.review[rid].cat);
+  if (v==='auto'){ a.level='auto'; d.learned=`${a.n} is now automatic.`; }
+  else d.learned = `Driftmail will keep asking before it acts on ${a.who}s.`;
+  render();
+  snack(v==='auto' ? `${a.n}: Automatic` : 'Noted. Driftmail will keep asking.', v==='auto' ? ()=>{ a.level='ask'; d.learned=undefined; render(); } : null);
+}
+function send(k){
+  const ed = $('#editor'); const d = S.drafts[k];
+  const text = ed ? ed.innerText.trim() : d.body;
+  const edited = text.replace(/\s+/g,' ') !== d.body.replace(/\[\[|\]\]/g,'').replace(/\s+/g,' ');
+  const t = new Date(); S.sent[k] = {text, edited, time:t.getHours()+':'+String(t.getMinutes()).padStart(2,'0')};
+  const m = mailById(d.mail); m.unread=false;
+  render();
+  snack('Message sent.', ()=>{ delete S.sent[k]; render(); });
+}
+
+document.addEventListener('click', e=>{
+  if (document.body.classList.contains('nav-open') && !e.target.closest('#nav') && !e.target.closest('#menu')) document.body.classList.remove('nav-open');
+  const t = e.target.closest('button, [data-open]'); if (!t) return;
+  const d = t.dataset;
+  if (d.story){ const v = {1:'review',2:'drafts'}[d.story]; return go(v); }
+  if (t.id==='reset'){ S=fresh(); $('#snackHost').innerHTML=''; return go('inbox'); }
+  if (t.id==='menu'){ document.body.classList.toggle('nav-open'); return; }
+  if (d.go) return go(d.go.startsWith('x-') ? 'placeholder' : d.go);
+  if (d.decide) return decide(d.decide, d.choice);
+  if (d.learn) return learn(d.learn, d.v);
+  if (d.hideIntro){ S.hiddenIntros[d.hideIntro]=true; return render(); }
+  if (d.send) return send(d.send);
+  if (d.rate){ S.sent[d.rate].rating = d.v; render(); return snack('Thanks for the feedback.'); }
+  if (d.savedraft){ const ed=$('#editor'); if(ed) S.drafts[d.savedraft].body = ed.innerHTML.replace(/<mark[^>]*>(.*?)<\/mark>/g,'[[$1]]').replace(/<br>/g,'\n').replace(/<[^>]+>/g,''); snack('Saved. It stays in Drafts to approve.'); return go('drafts'); }
+  if (d.discard){ const k=d.discard; S.drafts[k].discarded=true; render(); return snack('Draft discarded. Driftmail will learn from it.', ()=>{ S.drafts[k].discarded=false; render(); }); }
+  if (d.open){ S.open=d.open; const target = d.goOpen && d.goOpen!=='inbox' ? d.goOpen : null; if (target) return go(target); return snack('Opening regular emails isn’t part of this prototype.'); }
+});
+document.addEventListener('keydown', e=>{ if ((e.key==='Enter'||e.key===' ') && e.target.matches('[data-open][role="button"]')){ e.preventDefault(); e.target.click(); } });
+
+render();
+})();
+</script>
+
+</body></html>
